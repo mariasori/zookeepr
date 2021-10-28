@@ -1,8 +1,17 @@
+const fs = require('fs');
+const path = require('path');
+
 const { animals } = require('./data/animals');
 const express = require('express');
 
 const PORT = process.env.PORT || 3001;
 const app = express();
+
+// parse incoming string or array data
+// extended: true informs our server that there may be subarray data nested in it as well
+app.use(express.urlencoded({ extended: true }));
+// parse incoming JSON data
+app.use(express.json());
 
 function filterByQuery(query, animalsArray) {
     let personalityTraitsArray = [];
@@ -48,6 +57,33 @@ function findById(id, animalsArray) {
     return result;
 }
 
+function createNewAnimal(body, animalsArray) {
+    const animal = body;
+    animalsArray.push(animal);
+    fs.writeFileSync(
+        path.join(__dirname, './data/animals.json'),
+        JSON.stringify({ animals: animalsArray }, null, 2)
+    );
+    return animal;
+}
+
+//validation function to make sure that key exists and is correct type of data
+function validateAnimal(animal) {
+    if (!animal.name || typeof animal.name !== 'string') {
+      return false;
+    }
+    if (!animal.species || typeof animal.species !== 'string') {
+      return false;
+    }
+    if (!animal.diet || typeof animal.diet !== 'string') {
+      return false;
+    }
+    if (!animal.personalityTraits || !Array.isArray(animal.personalityTraits)) {
+      return false;
+    }
+    return true;
+  }
+
 app.get('/api/animals', (req, res) => {
     let results = animals;
     if (req.query) {
@@ -62,6 +98,21 @@ app.get('/api/animals/:id', (req, res) => {
         res.json(result);
     } else {
         res.send(404);
+    }
+});
+
+app.post('/api/animals', (req, res) => {
+    // req.body is where our incoming content will be
+
+    //set id based on what the next index of the array will be
+    req.body.id = animals.length.toString();
+
+    // if any data in req.body is incorrect, send 400 error back
+    if (!validateAnimal(req.body)) {
+        res.status(400).send('The animal is not properly formatted.');
+    } else {
+        const animal = createNewAnimal
+        res.json(animal)
     }
 });
 
